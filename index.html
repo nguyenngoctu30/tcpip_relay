@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MQTT Device Control & IP Config</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.header {
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+    padding: 30px 20px;
+}
+
+.header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    font-weight: 700;
+    letter-spacing: -1px;
+}
+
+.header p {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.section {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.section:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+}
+
+.section h3 {
+    font-size: 1.3em;
+    color: #333;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section h3 i {
+    color: #667eea;
+    font-size: 1.2em;
+}
+
+label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+input {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1em;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+button {
+    width: 100%;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-on {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+    flex: 1;
+}
+
+.btn-on:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+}
+
+.btn-off {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+    flex: 1;
+}
+
+.btn-off:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+    margin: 12px 0;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.status-item {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.status-label {
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-value {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #333;
+}
+
+.online {
+    color: #10b981;
+    font-weight: bold;
+}
+
+.offline {
+    color: #ef4444;
+    font-weight: bold;
+}
+
+.connecting {
+    color: #f59e0b;
+    font-weight: bold;
+}
+
+#configStatus {
+    margin-top: 15px;
+    padding: 12px;
+    background: #d1fae5;
+    border-left: 4px solid #10b981;
+    color: #047857;
+    border-radius: 8px;
+    font-weight: 600;
+    display: none;
+}
+
+#configStatus.show {
+    display: block;
+}
+
+#debugLog {
+    background: #1a1a1a;
+    color: #0ff;
+    padding: 15px;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    height: 250px;
+    overflow-y: auto;
+    border: 2px solid #333;
+    line-height: 1.5;
+    margin-top: 10px;
+}
+
+#debugLog::-webkit-scrollbar {
+    width: 8px;
+}
+
+#debugLog::-webkit-scrollbar-track {
+    background: #0a0a0a;
+    border-radius: 10px;
+}
+
+#debugLog::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 10px;
+}
+
+#debugLog::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+@media (max-width: 600px) {
+    .header h1 {
+        font-size: 1.8em;
+    }
+    
+    .status-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .button-group {
+        flex-direction: column;
+    }
+    
+    .btn-on, .btn-off {
+        flex: auto;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-cogs"></i> MQTT Device Manager</h1>
+        <p>Quản lý thiết bị IoT qua MQTT Broker</p>
+    </div>
+
+    <div class="section">
+        <h3><i class="fas fa-wifi"></i> Kết Nối MQTT</h3>
+        <label>MAC Address của thiết bị:</label>
+        <input type="text" id="mac" placeholder="54:32:04:0C:E6:02" style="text-transform: uppercase;">
+        <button class="btn-primary" onclick="connectMQTT()"><i class="fas fa-link"></i> Kết Nối</button>
+    </div>
+
+    <div class="section">
+        <h3><i class="fas fa-info-circle"></i> Trạng Thái Hệ Thống</h3>
+        <div class="status-grid">
+            <div class="status-item">
+                <div class="status-label">MQTT Broker</div>
+                <div class="status-value"><span id="mqttStatus">Chưa kết nối</span></div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Thiết Bị</div>
+                <div class="status-value"><span id="deviceStatus">--</span></div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">IP Hiện Tại</div>
+                <div class="status-value"><span id="deviceIP">--</span></div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Trạng Thái Relay</div>
+                <div class="status-value"><span id="deviceState">--</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3><i class="fas fa-power-off"></i> Điều Khiển Thiết Bị</h3>
+        <div class="button-group">
+            <button class="btn-on" onclick="sendCommand(1)"><i class="fas fa-toggle-on"></i> BẬT</button>
+            <button class="btn-off" onclick="sendCommand(0)"><i class="fas fa-toggle-off"></i> TẮT</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3><i class="fas fa-network-wired"></i> Cấu Hình IP Tĩnh</h3>
+        <label>MAC Address của thiết bị cần cấu hình:</label>
+        <input type="text" id="targetMac" placeholder="54:32:04:0C:E6:02" style="text-transform: uppercase;">
+        
+        <label>Thông tin IP:</label>
+        <input type="text" id="ip" placeholder="IP (ví dụ: 192.168.1.100)">
+        <input type="text" id="gateway" placeholder="Gateway (ví dụ: 192.168.1.1)">
+        <input type="text" id="subnet" placeholder="Subnet (ví dụ: 255.255.255.0)">
+        <input type="text" id="dns" placeholder="DNS (ví dụ: 8.8.8.8)">
+        
+        <button class="btn-primary" onclick="sendConfig()"><i class="fas fa-check-circle"></i> Gửi Cấu Hình IP</button>
+        <div id="configStatus"></div>
+    </div>
+
+    <div class="section">
+        <h3><i class="fas fa-search"></i> Quét IP Thiết Bị Online</h3>
+        
+        <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2196F3;">
+            <div style="font-weight: 600; color: #1565c0; margin-bottom: 5px;">IP Hiện Tại: <span id="currentDeviceIP">Đang lấy...</span></div>
+            <div style="font-size: 0.9em; color: #1565c0;">Dải mạng sẽ quét: <span id="networkRangeInfo">Đang lấy...</span></div>
+        </div>
+        
+        <label style="display: flex; gap: 20px; font-weight: normal; margin: 15px 0;">
+            <input type="radio" name="scanType" value="quick" checked> <span>Quét Nhanh</span> <span style="color: #999; font-size: 0.9em;">(chỉ cổng dịch vụ)</span>
+            <input type="radio" name="scanType" value="full"> <span>Quét Đầy Đủ</span> <span style="color: #999; font-size: 0.9em;">(tất cả cổng)</span>
+        </label>
+        
+        <label>Timeout cho mỗi kết nối (ms):</label>
+        <input type="number" id="scanTimeout" placeholder="2000" value="2000" min="500" max="10000">
+        
+        <label>Số kết nối song song:</label>
+        <input type="number" id="concurrentConnections" placeholder="5" value="5" min="1" max="20">
+        
+        <div class="button-group">
+            <button class="btn-primary" onclick="startNetworkScan()" style="flex: 1;"><i class="fas fa-play"></i> Bắt Đầu Quét</button>
+            <button class="btn-primary" onclick="stopNetworkScan()" style="flex: 1; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);"><i class="fas fa-stop"></i> Dừng Quét</button>
+        </div>
+        
+        <div id="scanProgress" style="display: none; margin-top: 15px;">
+            <div style="font-size: 0.9em; color: #666; margin-bottom: 8px;">
+                Đang quét: <span id="currentIP">--</span> | <span id="foundCount">0</span> thiết bị tìm được
+            </div>
+            <div style="width: 100%; height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden;">
+                <div id="progressBar" style="height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); width: 0%; transition: width 0.3s;"></div>
+            </div>
+        </div>
+        
+        <table id="scanResultsTable" style="width: 100%; margin-top: 20px; border-collapse: collapse; display: none;">
+            <thead>
+                <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                    <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
+                    <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Cổng Mở</th>
+                    <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Dịch Vụ Phát Hiện</th>
+                    <th style="padding: 10px; text-align: center; color: #333; font-weight: 600;">Hành Động</th>
+                </tr>
+            </thead>
+            <tbody id="scanResultsBody">
+            </tbody>
+        </table>
+        
+        <div id="scanStatus" style="margin-top: 15px; padding: 12px; background: #f0f0f0; border-left: 4px solid #667eea; color: #333; border-radius: 8px; display: none; font-weight: 600;"></div>
+    </div>
+
+    <div class="section">
+        <h3><i class="fas fa-terminal"></i> Debug Log</h3>
+        <div id="debugLog"></div>
+    </div>
+</div>
+
+<script>
+
+let client;
+let cmdTopic, dataTopic, statusTopic, configTopic, ipTopic;
+
+function debugLog(msg) {
+    const logDiv = document.getElementById("debugLog");
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = `[${timestamp}] ${msg}\n`;
+    logDiv.innerHTML += logEntry;
+    logDiv.scrollTop = logDiv.scrollHeight;
+    console.log(msg);
+}
+
+// Khởi tạo khi trang load
+window.addEventListener('load', function() {
+    initNetworkInfo();
+});
+
+function connectMQTT() {
+    const mac = document.getElementById("mac").value.trim().toUpperCase();
+    if (!mac) {
+        alert("Vui lòng nhập MAC address!");
+        return;
+    }
+
+    debugLog(`MAC Address: ${mac}`);
+
+    cmdTopic    = `device/${mac}/cmd`;
+    dataTopic   = `device/${mac}/data`;
+    statusTopic = `device/${mac}/status`;
+    configTopic = `device/${mac}/config`;
+    ipTopic     = `device/${mac}/ip`;
+
+    debugLog(`Topics: cmd=${cmdTopic}`);
+    debugLog(`Topics: data=${dataTopic}`);
+    debugLog(`Topics: status=${statusTopic}`);
+    debugLog(`Topics: ip=${ipTopic}`);
+
+    const clientId = "webClient-" + Math.random().toString(16).substr(2,8);
+    client = new Paho.MQTT.Client("broker.hivemq.com", 8000, clientId);
+
+    debugLog(`Connecting with clientId: ${clientId}`);
+
+    client.onConnectionLost = function(responseObject) {
+        document.getElementById("mqttStatus").innerHTML = "Mất kết nối";
+        debugLog("Connection lost");
+        if (responseObject.errorCode !== 0) {
+            debugLog("Error: " + responseObject.errorMessage);
+        }
+    };
+
+    client.onMessageArrived = function(message) {
+        const payload = message.payloadString;
+        debugLog(`Message: [${message.destinationName}] = ${payload}`);
+
+        if (message.destinationName === statusTopic) {
+            if (payload === "ONLINE") {
+                document.getElementById("deviceStatus").innerHTML = 
+                    `<span class="online">ONLINE</span>`;
+                debugLog("Device status: ONLINE");
+            } else {
+                document.getElementById("deviceStatus").innerHTML = 
+                    `<span class="offline">${payload}</span>`;
+                debugLog(`Device status: ${payload}`);
+            }
+        }
+
+        if (message.destinationName === dataTopic) {
+            document.getElementById("deviceState").innerHTML = payload;
+            debugLog(`Relay state: ${payload}`);
+        }
+
+        if (message.destinationName === ipTopic) {
+            document.getElementById("deviceIP").innerHTML = 
+                `<strong>${payload}</strong>`;
+            debugLog(`Device IP: ${payload}`);
+        }
+    };
+
+    client.connect({
+        onSuccess: function() {
+            document.getElementById("mqttStatus").innerHTML = "Đã kết nối";
+            debugLog("Connected to MQTT broker successfully");
+            
+            debugLog(`Subscribe: ${statusTopic}`);
+            client.subscribe(statusTopic, {qos:1});
+            
+            debugLog(`Subscribe: ${dataTopic}`);
+            client.subscribe(dataTopic,   {qos:1});
+            
+            debugLog(`Subscribe: ${ipTopic}`);
+            client.subscribe(ipTopic,     {qos:1});
+            
+            debugLog("Waiting for messages...");
+        },
+        onFailure: function(err) {
+            alert("Kết nối MQTT thất bại: " + err.errorMessage);
+            document.getElementById("mqttStatus").innerHTML = "Kết nối thất bại";
+            debugLog("MQTT connection failed: " + err.errorMessage);
+        },
+        useSSL: false
+    });
+}
+
+function sendCommand(value) {
+    if (!client || !client.isConnected()) {
+        alert("Chưa kết nối MQTT!");
+        return;
+    }
+
+    debugLog(`Sending command: ${value} to ${cmdTopic}`);
+    const message = new Paho.MQTT.Message(String(value));
+    message.destinationName = cmdTopic;
+    message.qos = 1;
+    client.send(message);
+}
+
+function sendConfig() {
+    if (!client || !client.isConnected()) {
+        alert("Chưa kết nối MQTT!");
+        return;
+    }
+
+    const targetMac = document.getElementById("targetMac").value.trim().toUpperCase();
+    const ip      = document.getElementById("ip").value.trim();
+    const gateway = document.getElementById("gateway").value.trim();
+    const subnet  = document.getElementById("subnet").value.trim();
+    const dns     = document.getElementById("dns").value.trim();
+
+    if (!targetMac) {
+        alert("Vui lòng nhập MAC address của thiết bị cần cấu hình!");
+        return;
+    }
+
+    if (!ip || !gateway || !subnet || !dns) {
+        alert("Vui lòng nhập đầy đủ thông tin IP!");
+        return;
+    }
+
+    const configTopic = `device/${targetMac}/config`;
+    const payload = `ip=${ip},gateway=${gateway},subnet=${subnet},dns=${dns}`;
+
+    debugLog(`Sending config to ${configTopic}: ${payload}`);
+    const message = new Paho.MQTT.Message(payload);
+    message.destinationName = configTopic;
+    message.qos = 1;
+    client.send(message);
+
+    document.getElementById("configStatus").innerHTML = 
+        `Đã gửi cấu hình IP cho thiết bị ${targetMac}. Thiết bị sẽ thử áp dụng và kết nối lại...`;
+    
+    const statusDiv = document.getElementById("configStatus");
+    statusDiv.classList.add("show");
+
+    setTimeout(() => {
+        statusDiv.classList.remove("show");
+    }, 5000);
+}
+
+// ==================== NETWORK SCANNING ====================
+
+let scanRunning = false;
+let scannedIPs = {};
+let currentDeviceIP = null;
+let currentNetworkRange = null;
+
+// Lấy IP local từ WebRTC
+function getLocalIP() {
+    return new Promise((resolve) => {
+        const pc = new RTCPeerConnection({iceServers: []});
+        const noop = () => {};
+        const ipRegex = /([0-9]{1,3}(\.[0-9]{1,3}){3})/;
+        let ipFound = false;
+
+        pc.createDataChannel("");
+        pc.onicecandidate = (ice) => {
+            if (!ice || !ice.candidate) return;
+            const ipMatch = ice.candidate.candidate.match(ipRegex);
+            if (ipMatch && !ipFound) {
+                ipFound = true;
+                const ip = ipMatch[1];
+                pc.close();
+                
+                // Chỉ lấy IP private (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+                if (ip.startsWith('192.168.') || ip.startsWith('10.') || 
+                    (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31)) {
+                    resolve(ip);
+                }
+            }
+        };
+        
+        pc.createOffer(noop, noop);
+        
+        setTimeout(() => {
+            pc.close();
+            if (!ipFound) resolve(null);
+        }, 2000);
+    });
+}
+
+// Tính dải mạng từ IP
+function getNetworkRange(ip) {
+    if (!ip) return null;
+    const parts = ip.split('.');
+    return parts[0] + '.' + parts[1] + '.' + parts[2] + '.1-254';
+}
+
+// Khởi tạo khi load trang
+async function initNetworkInfo() {
+    debugLog("→ Đang lấy IP của thiết bị...");
+    const ip = await getLocalIP();
+    
+    if (ip) {
+        currentDeviceIP = ip;
+        currentNetworkRange = getNetworkRange(ip);
+        document.getElementById("currentDeviceIP").textContent = ip;
+        document.getElementById("networkRangeInfo").textContent = currentNetworkRange;
+        debugLog(`✓ IP thiết bị: ${ip}`);
+        debugLog(`✓ Dải mạng: ${currentNetworkRange}`);
+    } else {
+        debugLog("⚠ Không thể lấy IP local (cần Web Socket hoặc TURN server)");
+        document.getElementById("currentDeviceIP").textContent = "Không thể lấy (kiểm tra lại mạng)";
+        document.getElementById("networkRangeInfo").textContent = "Vui lòng kiểm tra kết nối";
+    }
+}
+
+function updateScanMode() {
+    const mode = document.querySelector('input[name="scanMode"]:checked').value;
+    document.getElementById("rangeScanDiv").style.display = mode === 'range' ? 'block' : 'none';
+    document.getElementById("listScanDiv").style.display = mode === 'list' ? 'block' : 'none';
+}
+
+function getScanPorts() {
+    const scanType = document.querySelector('input[name="scanType"]:checked').value;
+    
+    const quickPorts = ['22', '80', '443', '1883', '8000', '8080', '3000', '5000'];
+    const fullPorts = ['21', '22', '80', '443', '3306', '5432', '6379', '8000', '8080', '8081', '8888', '3000', '5000', '1883', '8883', '27017', '9200', '5601'];
+    
+    return scanType === 'quick' ? quickPorts : fullPorts;
+}
+
+function parseNetworkRange(rangeStr) {
+    const range = rangeStr.trim();
+    const ips = [];
+    
+    // CIDR notation: 192.168.1.0/24
+    if (range.includes('/')) {
+        const [baseIp, mask] = range.split('/');
+        const parts = baseIp.split('.').map(Number);
+        const maskBits = parseInt(mask);
+        
+        if (maskBits === 24) {
+            const base = parts[0] + '.' + parts[1] + '.' + parts[2];
+            for (let i = 1; i < 255; i++) {
+                ips.push(base + '.' + i);
+            }
+        } else if (maskBits === 16) {
+            const base = parts[0] + '.' + parts[1];
+            for (let i = 0; i < 256; i++) {
+                for (let j = 1; j < 255; j++) {
+                    ips.push(base + '.' + i + '.' + j);
+                }
+            }
+        } else if (maskBits === 25) {
+            const base = parts[0] + '.' + parts[1] + '.' + parts[2];
+            for (let i = 1; i < 127; i++) {
+                ips.push(base + '.' + i);
+            }
+        }
+    }
+    // Range notation: 192.168.1.1-254
+    else if (range.includes('-')) {
+        const lastDashIndex = range.lastIndexOf('-');
+        const basePart = range.substring(0, lastDashIndex);
+        const rangePart = range.substring(lastDashIndex + 1);
+        
+        const [startRange, endRange] = rangePart.split('-').map(Number);
+        const start = parseInt(basePart.split('.')[3] || startRange);
+        const end = parseInt(endRange);
+        
+        const baseParts = basePart.split('.');
+        baseParts[3] = '';
+        const baseIp = baseParts.slice(0, 3).join('.');
+        
+        for (let i = start; i <= end; i++) {
+            ips.push(baseIp + '.' + i);
+        }
+    }
+    // Single IP
+    else if (/^\d+\.\d+\.\d+\.\d+$/.test(range)) {
+        ips.push(range);
+    }
+    
+    return ips.filter(ip => ip && /^\d+\.\d+\.\d+\.\d+$/.test(ip));
+}
+
+function portToService(port) {
+    const services = {
+        '21': 'FTP',
+        '22': 'SSH',
+        '80': 'HTTP',
+        '443': 'HTTPS',
+        '3306': 'MySQL',
+        '5432': 'PostgreSQL',
+        '6379': 'Redis',
+        '8000': 'Web',
+        '8080': 'Web',
+        '8081': 'Web',
+        '8888': 'Web',
+        '3000': 'Web/Node',
+        '5000': 'Web/Python',
+        '1883': 'MQTT',
+        '8883': 'MQTT/SSL',
+        '27017': 'MongoDB',
+        '9200': 'Elasticsearch',
+        '5601': 'Kibana',
+        '6081': 'Varnish',
+        '9000': 'PHPMyAdmin'
+    };
+    return services[port] || 'Unknown';
+}
+
+function checkPort(ip, port, timeout) {
+    return new Promise((resolve) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        
+        fetch(`http://${ip}:${port}/`, {
+            method: 'HEAD',
+            mode: 'no-cors',
+            signal: controller.signal,
+            timeout: timeout
+        })
+        .then(() => {
+            clearTimeout(timeoutId);
+            resolve(true);
+        })
+        .catch(() => {
+            clearTimeout(timeoutId);
+            const img = new Image();
+            img.src = `http://${ip}:${port}/favicon.ico`;
+            const imgTimeout = setTimeout(() => resolve(false), timeout);
+            img.onload = img.onerror = () => {
+                clearTimeout(imgTimeout);
+                resolve(true);
+            };
+        });
+    });
+}
+
+async function startNetworkScan() {
+    if (!currentDeviceIP || !currentNetworkRange) {
+        alert("Chưa lấy được IP thiết bị. Vui lòng tải lại trang!");
+        return;
+    }
+    
+    const ips = parseNetworkRange(currentNetworkRange);
+    const ports = getScanPorts();
+    const scanTimeout = parseInt(document.getElementById("scanTimeout").value) || 2000;
+    const concurrent = parseInt(document.getElementById("concurrentConnections").value) || 5;
+    const scanType = document.querySelector('input[name="scanType"]:checked').value;
+    
+    debugLog(`=== BẮT ĐẦU QUÉT THIẾT BỊ ONLINE ===`);
+    debugLog(`IP máy bạn: ${currentDeviceIP}`);
+    debugLog(`Số IP quét: ${ips.length}`);
+    debugLog(`Cổng quét (${scanType}): ${ports.join(', ')}`);
+    debugLog(`Timeout: ${scanTimeout}ms | Song song: ${concurrent}`);
+    
+    scanRunning = true;
+    scannedIPs = {};
+    
+    document.getElementById("scanProgress").style.display = "block";
+    document.getElementById("scanStatus").style.display = "none";
+    document.getElementById("scanResultsTable").style.display = "none";
+    document.getElementById("scanResultsBody").innerHTML = "";
+    
+    const startTime = Date.now();
+    let processed = 0;
+    
+    // Quét song song
+    for (let i = 0; i < ips.length; i += concurrent) {
+        if (!scanRunning) break;
+        
+        const batch = ips.slice(i, i + concurrent);
+        
+        await Promise.all(batch.map(async (ip) => {
+            document.getElementById("currentIP").textContent = ip;
+            document.getElementById("progressBar").style.width = ((++processed) / ips.length * 100) + "%";
+            
+            const openPorts = [];
+            
+            for (const port of ports) {
+                const isOpen = await checkPort(ip, port, scanTimeout);
+                if (isOpen) {
+                    openPorts.push({
+                        port: port,
+                        service: portToService(port)
+                    });
+                    debugLog(`✓ ${ip}:${port} (${portToService(port)}) - ONLINE`);
+                }
+            }
+            
+            if (openPorts.length > 0) {
+                scannedIPs[ip] = openPorts;
+                document.getElementById("foundCount").textContent = Object.keys(scannedIPs).length;
+                addResultRow(ip, openPorts);
+            }
+        }));
+    }
+    
+    scanRunning = false;
+    document.getElementById("scanProgress").style.display = "none";
+    
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    const statusMsg = `✓ Quét hoàn thành! ${duration}s | Tìm được ${Object.keys(scannedIPs).length} thiết bị`;
+    debugLog(statusMsg);
+    
+    if (Object.keys(scannedIPs).length > 0) {
+        document.getElementById("scanResultsTable").style.display = "table";
+        document.getElementById("scanStatus").innerHTML = statusMsg;
+        document.getElementById("scanStatus").style.display = "block";
+    } else {
+        document.getElementById("scanStatus").innerHTML = "ℹ Không tìm thấy thiết bị nào!";
+        document.getElementById("scanStatus").style.display = "block";
+    }
+}
+
+function stopNetworkScan() {
+    if (scanRunning) {
+        scanRunning = false;
+        debugLog("⊗ Quét đã bị dừng");
+        document.getElementById("scanProgress").style.display = "none";
+        document.getElementById("scanStatus").innerHTML = "⊗ Quét đã bị dừng!";
+        document.getElementById("scanStatus").style.display = "block";
+    }
+}
+
+function addResultRow(ip, openPorts) {
+    const table = document.getElementById("scanResultsBody");
+    const row = document.createElement("tr");
+    row.style.borderBottom = "1px solid #eee";
+    
+    const portsStr = openPorts.map(p => `${p.port}`).join(", ");
+    const servicesStr = openPorts.map(p => p.service).join(", ");
+    
+    row.innerHTML = `
+        <td style="padding: 12px; color: #333;"><strong>${ip}</strong></td>
+        <td style="padding: 12px; color: #667eea; font-weight: 600;">${portsStr}</td>
+        <td style="padding: 12px; color: #666;">${servicesStr}</td>
+        <td style="padding: 12px; text-align: center;">
+            <button onclick="copyToClipboard('${ip}')" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Sao chép</button>
+        </td>
+    `;
+    table.appendChild(row);
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        debugLog(`✓ Đã sao chép: ${text}`);
+    }).catch(() => {
+        alert("Không thể sao chép!");
+    });
+}
+
+</script>
+
+</body>
+</html>
