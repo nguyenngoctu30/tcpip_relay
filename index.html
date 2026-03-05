@@ -330,11 +330,11 @@ button {
     </div>
 
     <div class="section">
-        <h3><i class="fas fa-search"></i> Quét IP Thiết Bị Online</h3>
+        <h3><i class="fas fa-search"></i> Scan IP Trong Mạng</h3>
         
         <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2196F3;">
             <div style="font-weight: 600; color: #1565c0; margin-bottom: 5px;">IP Hiện Tại: <span id="currentDeviceIP">Đang lấy...</span></div>
-            <div style="font-size: 0.9em; color: #1565c0;">Dải mạng sẽ quét: <span id="networkRangeInfo">Đang lấy...</span></div>
+            <div style="font-size: 0.9em; color: #1565c0;">Dải mạng sẽ scan: <span id="networkRangeInfo">Đang lấy...</span></div>
         </div>
         
         <div id="manualIPDiv" style="display: none; background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ffc107;">
@@ -343,20 +343,15 @@ button {
             <button class="btn-primary" onclick="setManualIP()" style="width: 100%;"><i class="fas fa-check"></i> Xác Nhận</button>
         </div>
         
-        <label style="display: flex; gap: 20px; font-weight: normal; margin: 15px 0;">
-            <input type="radio" name="scanType" value="quick" checked> <span>Quét Nhanh</span> <span style="color: #999; font-size: 0.9em;">(chỉ cổng dịch vụ)</span>
-            <input type="radio" name="scanType" value="full"> <span>Quét Đầy Đủ</span> <span style="color: #999; font-size: 0.9em;">(tất cả cổng)</span>
-        </label>
-        
-        <label>Timeout cho mỗi kết nối (ms):</label>
-        <input type="number" id="scanTimeout" placeholder="2000" value="2000" min="500" max="10000">
+        <label>Timeout cho mỗi IP (ms) - càng nhỏ càng nhanh:</label>
+        <input type="number" id="scanTimeout" placeholder="1000" value="1000" min="200" max="5000">
         
         <label>Số kết nối song song:</label>
-        <input type="number" id="concurrentConnections" placeholder="5" value="5" min="1" max="20">
+        <input type="number" id="concurrentConnections" placeholder="10" value="10" min="1" max="50">
         
         <div class="button-group">
-            <button class="btn-primary" onclick="startNetworkScan()" style="flex: 1;"><i class="fas fa-play"></i> Bắt Đầu Quét</button>
-            <button class="btn-primary" onclick="stopNetworkScan()" style="flex: 1; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);"><i class="fas fa-stop"></i> Dừng Quét</button>
+            <button class="btn-primary" onclick="startIPScan()" style="flex: 1;"><i class="fas fa-play"></i> Bắt Đầu Scan</button>
+            <button class="btn-primary" onclick="stopIPScan()" style="flex: 1; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);"><i class="fas fa-stop"></i> Dừng Scan</button>
         </div>
         
         <div id="scanProgress" style="display: none; margin-top: 15px;">
@@ -372,8 +367,7 @@ button {
             <thead>
                 <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
                     <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
-                    <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Cổng Mở</th>
-                    <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Dịch Vụ Phát Hiện</th>
+                    <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Trạng Thái</th>
                     <th style="padding: 10px; text-align: center; color: #333; font-weight: 600;">Hành Động</th>
                 </tr>
             </thead>
@@ -690,21 +684,6 @@ async function initNetworkInfo() {
     }
 }
 
-function updateScanMode() {
-    const mode = document.querySelector('input[name="scanMode"]:checked').value;
-    document.getElementById("rangeScanDiv").style.display = mode === 'range' ? 'block' : 'none';
-    document.getElementById("listScanDiv").style.display = mode === 'list' ? 'block' : 'none';
-}
-
-function getScanPorts() {
-    const scanType = document.querySelector('input[name="scanType"]:checked').value;
-    
-    const quickPorts = ['22', '80', '443', '1883', '8000', '8080', '3000', '5000'];
-    const fullPorts = ['21', '22', '80', '443', '3306', '5432', '6379', '8000', '8080', '8081', '8888', '3000', '5000', '1883', '8883', '27017', '9200', '5601'];
-    
-    return scanType === 'quick' ? quickPorts : fullPorts;
-}
-
 function parseNetworkRange(rangeStr) {
     const range = rangeStr.trim();
     const ips = [];
@@ -760,42 +739,18 @@ function parseNetworkRange(rangeStr) {
     return ips.filter(ip => ip && /^\d+\.\d+\.\d+\.\d+$/.test(ip));
 }
 
-function portToService(port) {
-    const services = {
-        '21': 'FTP',
-        '22': 'SSH',
-        '80': 'HTTP',
-        '443': 'HTTPS',
-        '3306': 'MySQL',
-        '5432': 'PostgreSQL',
-        '6379': 'Redis',
-        '8000': 'Web',
-        '8080': 'Web',
-        '8081': 'Web',
-        '8888': 'Web',
-        '3000': 'Web/Node',
-        '5000': 'Web/Python',
-        '1883': 'MQTT',
-        '8883': 'MQTT/SSL',
-        '27017': 'MongoDB',
-        '9200': 'Elasticsearch',
-        '5601': 'Kibana',
-        '6081': 'Varnish',
-        '9000': 'PHPMyAdmin'
-    };
-    return services[port] || 'Unknown';
-}
-
-function checkPort(ip, port, timeout) {
+// Kiểm tra xem IP có responsive (đang sử dụng) không
+function checkIPActive(ip, timeout) {
     return new Promise((resolve) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
         
-        fetch(`http://${ip}:${port}/`, {
+        // Thử fetch request - nếu IP responsive sẽ có response nhanh
+        fetch(`http://${ip}/`, {
             method: 'HEAD',
             mode: 'no-cors',
             signal: controller.signal,
-            timeout: timeout
+            cache: 'no-store'
         })
         .then(() => {
             clearTimeout(timeoutId);
@@ -803,35 +758,27 @@ function checkPort(ip, port, timeout) {
         })
         .catch(() => {
             clearTimeout(timeoutId);
-            const img = new Image();
-            img.src = `http://${ip}:${port}/favicon.ico`;
-            const imgTimeout = setTimeout(() => resolve(false), timeout);
-            img.onload = img.onerror = () => {
-                clearTimeout(imgTimeout);
-                resolve(true);
-            };
+            resolve(false);
         });
     });
 }
 
-async function startNetworkScan() {
+async function startIPScan() {
     if (!currentDeviceIP || !currentNetworkRange) {
         document.getElementById("manualIPDiv").style.display = "block";
-        alert("Vui lòng nhập IP thiết bị để quét mạng!");
+        alert("Vui lòng nhập IP thiết bị để scan mạng!");
         document.getElementById("manualIP").focus();
         return;
     }
     
     const ips = parseNetworkRange(currentNetworkRange);
-    const ports = getScanPorts();
-    const scanTimeout = parseInt(document.getElementById("scanTimeout").value) || 2000;
-    const concurrent = parseInt(document.getElementById("concurrentConnections").value) || 5;
-    const scanType = document.querySelector('input[name="scanType"]:checked').value;
+    const scanTimeout = parseInt(document.getElementById("scanTimeout").value) || 1000;
+    const concurrent = parseInt(document.getElementById("concurrentConnections").value) || 10;
     
-    debugLog(`=== BẮT ĐẦU QUÉT THIẾT BỊ ONLINE ===`);
+    debugLog(`=== BẮT ĐẦU SCAN CÁC IP ĐANG SỬ DỤNG ===`);
     debugLog(`IP máy bạn: ${currentDeviceIP}`);
-    debugLog(`Số IP quét: ${ips.length}`);
-    debugLog(`Cổng quét (${scanType}): ${ports.join(', ')}`);
+    debugLog(`Dải scan: ${currentNetworkRange}`);
+    debugLog(`Số IP: ${ips.length}`);
     debugLog(`Timeout: ${scanTimeout}ms | Song song: ${concurrent}`);
     
     scanRunning = true;
@@ -845,7 +792,7 @@ async function startNetworkScan() {
     const startTime = Date.now();
     let processed = 0;
     
-    // Quét song song
+    // Scan song song
     for (let i = 0; i < ips.length; i += concurrent) {
         if (!scanRunning) break;
         
@@ -855,23 +802,13 @@ async function startNetworkScan() {
             document.getElementById("currentIP").textContent = ip;
             document.getElementById("progressBar").style.width = ((++processed) / ips.length * 100) + "%";
             
-            const openPorts = [];
+            const isActive = await checkIPActive(ip, scanTimeout);
             
-            for (const port of ports) {
-                const isOpen = await checkPort(ip, port, scanTimeout);
-                if (isOpen) {
-                    openPorts.push({
-                        port: port,
-                        service: portToService(port)
-                    });
-                    debugLog(`✓ ${ip}:${port} (${portToService(port)}) - ONLINE`);
-                }
-            }
-            
-            if (openPorts.length > 0) {
-                scannedIPs[ip] = openPorts;
+            if (isActive) {
+                scannedIPs[ip] = true;
                 document.getElementById("foundCount").textContent = Object.keys(scannedIPs).length;
-                addResultRow(ip, openPorts);
+                addIPResultRow(ip);
+                debugLog(`✓ ${ip} - ACTIVE`);
             }
         }));
     }
@@ -880,41 +817,38 @@ async function startNetworkScan() {
     document.getElementById("scanProgress").style.display = "none";
     
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    const statusMsg = `✓ Quét hoàn thành! ${duration}s | Tìm được ${Object.keys(scannedIPs).length} thiết bị`;
+    const foundCount = Object.keys(scannedIPs).length;
+    const statusMsg = `✓ Scan hoàn thành! ${duration}s | Tìm được ${foundCount} IP đang sử dụng`;
     debugLog(statusMsg);
     
-    if (Object.keys(scannedIPs).length > 0) {
+    if (foundCount > 0) {
         document.getElementById("scanResultsTable").style.display = "table";
         document.getElementById("scanStatus").innerHTML = statusMsg;
         document.getElementById("scanStatus").style.display = "block";
     } else {
-        document.getElementById("scanStatus").innerHTML = "ℹ Không tìm thấy thiết bị nào!";
+        document.getElementById("scanStatus").innerHTML = "ℹ Không tìm thấy IP nào (thử tăng timeout)";
         document.getElementById("scanStatus").style.display = "block";
     }
 }
 
-function stopNetworkScan() {
+function stopIPScan() {
     if (scanRunning) {
         scanRunning = false;
-        debugLog("⊗ Quét đã bị dừng");
+        debugLog("⊗ Scan đã bị dừng");
         document.getElementById("scanProgress").style.display = "none";
-        document.getElementById("scanStatus").innerHTML = "⊗ Quét đã bị dừng!";
+        document.getElementById("scanStatus").innerHTML = "⊗ Scan đã bị dừng!";
         document.getElementById("scanStatus").style.display = "block";
     }
 }
 
-function addResultRow(ip, openPorts) {
+function addIPResultRow(ip) {
     const table = document.getElementById("scanResultsBody");
     const row = document.createElement("tr");
     row.style.borderBottom = "1px solid #eee";
     
-    const portsStr = openPorts.map(p => `${p.port}`).join(", ");
-    const servicesStr = openPorts.map(p => p.service).join(", ");
-    
     row.innerHTML = `
         <td style="padding: 12px; color: #333;"><strong>${ip}</strong></td>
-        <td style="padding: 12px; color: #667eea; font-weight: 600;">${portsStr}</td>
-        <td style="padding: 12px; color: #666;">${servicesStr}</td>
+        <td style="padding: 12px; color: #10b981; font-weight: 600;">🟢 Đang sử dụng</td>
         <td style="padding: 12px; text-align: center;">
             <button onclick="copyToClipboard('${ip}')" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Sao chép</button>
         </td>
