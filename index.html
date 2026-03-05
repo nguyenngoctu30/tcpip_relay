@@ -267,9 +267,51 @@ button {
     }
 }
 </style>
+
+/* login overlay styles */
+#loginOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+#loginBox {
+    background: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    width: 300px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+#loginBox h2 {
+    margin-bottom: 20px;
+    text-align: center;
+}
+#loginBox input {
+    margin-bottom: 15px;
+}
+
+</style>
 </head>
 
 <body>
+
+<!-- simple login overlay -->
+<div id="loginOverlay">
+    <div id="loginBox">
+        <h2>Đăng nhập</h2>
+        <label>Tài khoản</label>
+        <input type="text" id="loginUser" placeholder="Username">
+        <label>Mật khẩu</label>
+        <input type="password" id="loginPass" placeholder="Password">
+        <button class="btn-primary" onclick="doLogin()">Đăng nhập</button>
+    </div>
+</div>
 
 <div class="container">
     <div class="header">
@@ -330,61 +372,24 @@ button {
     </div>
 
     <div class="section">
-        <h3><i class="fas fa-search"></i> Scan IP Trong Mạng</h3>
-        
-        <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2196F3;">
-            <div style="font-weight: 600; color: #1565c0; margin-bottom: 5px;">IP Hiện Tại: <span id="currentDeviceIP">Đang lấy...</span></div>
-            <div style="font-size: 0.9em; color: #1565c0;">Dải mạng sẽ scan: <span id="networkRangeInfo">Đang lấy...</span></div>
-        </div>
-        
-        <div id="manualIPDiv" style="display: none; background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ffc107;">
-            <label style="color: #856404; font-weight: 600; margin-bottom: 8px; display: block;">Không thể lấy IP tự động. Vui lòng nhập IP của thiết bị:</label>
-            <input type="text" id="manualIP" placeholder="ví dụ: 192.168.1.100" style="margin-bottom: 8px;">
-            <button class="btn-primary" onclick="setManualIP()" style="width: 100%;"><i class="fas fa-check"></i> Xác Nhận</button>
-        </div>
-        
-        <label>Timeout cho mỗi IP (ms) - càng nhỏ càng nhanh:</label>
-        <input type="number" id="scanTimeout" placeholder="1000" value="1000" min="200" max="5000">
-        
-        <label>Số kết nối song song:</label>
-        <input type="number" id="concurrentConnections" placeholder="10" value="10" min="1" max="50">
-        
-        <div class="button-group">
-            <button class="btn-primary" onclick="startIPScan()" style="flex: 1;"><i class="fas fa-play"></i> Bắt Đầu Scan</button>
-            <button class="btn-primary" onclick="stopIPScan()" style="flex: 1; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);"><i class="fas fa-stop"></i> Dừng Scan</button>
-        </div>
-        
-        <div id="scanProgress" style="display: none; margin-top: 15px;">
-            <div style="font-size: 0.9em; color: #666; margin-bottom: 8px;">
-                Đang quét: <span id="currentIP">--</span> | <span id="foundCount">0</span> thiết bị tìm được
-            </div>
-            <div style="width: 100%; height: 20px; background: #e0e0e0; border-radius: 10px; overflow: hidden;">
-                <div id="progressBar" style="height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); width: 0%; transition: width 0.3s;"></div>
-            </div>
-        </div>
-        
-        <table id="scanResultsTable" style="width: 100%; margin-top: 20px; border-collapse: collapse; display: none;">
-            <thead>
-                <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
-                    <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">IP Address</th>
-                    <th style="padding: 10px; text-align: left; color: #333; font-weight: 600;">Trạng Thái</th>
-                    <th style="padding: 10px; text-align: center; color: #333; font-weight: 600;">Hành Động</th>
-                </tr>
-            </thead>
-            <tbody id="scanResultsBody">
-            </tbody>
-        </table>
-        
-        <div id="scanStatus" style="margin-top: 15px; padding: 12px; background: #f0f0f0; border-left: 4px solid #667eea; color: #333; border-radius: 8px; display: none; font-weight: 600;"></div>
-    </div>
-
-    <div class="section">
         <h3><i class="fas fa-terminal"></i> Debug Log</h3>
         <div id="debugLog"></div>
     </div>
 </div>
 
 <script>
+
+// simple authentication for access
+function doLogin() {
+    const user = document.getElementById("loginUser").value.trim();
+    const pass = document.getElementById("loginPass").value.trim();
+
+    if (user === "admin" && pass === "admin1234") {
+        document.getElementById("loginOverlay").style.display = "none";
+        return;
+    }
+    alert("Sai tài khoản hoặc mật khẩu!");
+}
 
 let client;
 let cmdTopic, dataTopic, statusTopic, configTopic, ipTopic;
@@ -397,11 +402,6 @@ function debugLog(msg) {
     logDiv.scrollTop = logDiv.scrollHeight;
     console.log(msg);
 }
-
-// Khởi tạo khi trang load
-window.addEventListener('load', function() {
-    initNetworkInfo();
-});
 
 function connectMQTT() {
     const mac = document.getElementById("mac").value.trim().toUpperCase();
@@ -544,7 +544,6 @@ function sendConfig() {
     }, 5000);
 }
 
-// ==================== NETWORK SCANNING ====================
 
 let scanRunning = false;
 let scannedIPs = {};
@@ -715,20 +714,24 @@ function parseNetworkRange(rangeStr) {
     }
     // Range notation: 192.168.1.1-254
     else if (range.includes('-')) {
+        // Tìm vị trí dấu '-' cuối cùng
         const lastDashIndex = range.lastIndexOf('-');
-        const basePart = range.substring(0, lastDashIndex);
-        const rangePart = range.substring(lastDashIndex + 1);
+        const beforeDash = range.substring(0, lastDashIndex);
+        const afterDash = range.substring(lastDashIndex + 1);
         
-        const [startRange, endRange] = rangePart.split('-').map(Number);
-        const start = parseInt(basePart.split('.')[3] || startRange);
-        const end = parseInt(endRange);
+        // Parse: "192.168.1.1" trở thành base "192.168.1" và start "1"
+        const parts = beforeDash.split('.');
+        const start = parseInt(parts[3]); // lấy octet cuối từ trước dấu "-"
+        const end = parseInt(afterDash);
         
-        const baseParts = basePart.split('.');
-        baseParts[3] = '';
-        const baseIp = baseParts.slice(0, 3).join('.');
+        // Base IP: lấy 3 octet đầu
+        const baseIp = parts.slice(0, 3).join('.');
         
-        for (let i = start; i <= end; i++) {
-            ips.push(baseIp + '.' + i);
+        // Kiểm tra xác thực
+        if (!isNaN(start) && !isNaN(end) && start <= end) {
+            for (let i = start; i <= end; i++) {
+                ips.push(baseIp + '.' + i);
+            }
         }
     }
     // Single IP
@@ -739,25 +742,74 @@ function parseNetworkRange(rangeStr) {
     return ips.filter(ip => ip && /^\d+\.\d+\.\d+\.\d+$/.test(ip));
 }
 
-// Kiểm tra xem IP có responsive (đang sử dụng) không
-function checkIPActive(ip, timeout) {
+
+// Thử kết nối tới 1 port
+function tryConnectToPort(ip, port, timeout) {
     return new Promise((resolve) => {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const ctrl = new AbortController();
+        const tm = setTimeout(() => ctrl.abort(), timeout);
         
-        // Thử fetch request - nếu IP responsive sẽ có response nhanh
-        fetch(`http://${ip}/`, {
+        fetch(`http://${ip}:${port}/`, {
             method: 'HEAD',
             mode: 'no-cors',
-            signal: controller.signal,
+            signal: ctrl.signal,
             cache: 'no-store'
         })
         .then(() => {
-            clearTimeout(timeoutId);
+            clearTimeout(tm);
             resolve(true);
         })
         .catch(() => {
-            clearTimeout(timeoutId);
+            clearTimeout(tm);
+            resolve(false);
+        });
+    });
+}
+
+// Kiểm tra xem IP có responsive (đang sử dụng) không
+function checkIPActive(ip, timeout) {
+    return new Promise((resolve) => {
+        // Danh sách ports phổ biến - thử tất cả cùng lúc
+        // FTP, SSH, SMTP, DNS, HTTP, HTTPS, SMB, NETBIOS, MQTT, Node, MySQL, PostgreSQL, Redis, MongoDB
+        const ports = [
+            21,   // FTP
+            22,   // SSH
+            23,   // Telnet
+            25,   // SMTP
+            53,   // DNS
+            80,   // HTTP
+            139,  // NetBIOS
+            443,  // HTTPS
+            445,  // SMB
+            1883, // MQTT
+            3000, // Node.js
+            3306, // MySQL
+            5000, // Python/Flask
+            5432, // PostgreSQL
+            6379, // Redis
+            8000, // Web alt
+            8080, // Web alt
+            8443, // HTTPS alt
+            8888, // Web alt
+            27017 // MongoDB
+        ];
+        
+        // Tạo promises cho tất cả ports - race (trả về true nếu bất cứ port nào mở)
+        const portPromises = ports.map(port => 
+            tryConnectToPort(ip, port, timeout / 4)
+        );
+        
+        // Promise.race - return ngay khi có 1 port mở
+        Promise.race([
+            ...portPromises,
+            new Promise((resolve) => {
+                setTimeout(() => resolve(false), timeout + 500);
+            })
+        ])
+        .then(result => {
+            resolve(result === true);
+        })
+        .catch(() => {
             resolve(false);
         });
     });
