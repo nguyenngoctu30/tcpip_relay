@@ -266,8 +266,6 @@ button {
         flex: auto;
     }
 }
-</style>
-
 /* login overlay styles */
 #loginOverlay {
     position: fixed;
@@ -275,18 +273,21 @@ button {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    animation: fadeIn 0.5s;
 }
 #loginBox {
-    background: #fff;
-    padding: 30px;
-    border-radius: 10px;
-    width: 300px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 30px 25px;
+    border-radius: 12px;
+    width: 320px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    color: #fff;
 }
 #loginBox h2 {
     margin-bottom: 20px;
@@ -294,12 +295,32 @@ button {
 }
 #loginBox input {
     margin-bottom: 15px;
+    background: rgba(255,255,255,0.9);
+}
+#loginBox label {
+    color: #eee;
 }
 
+@keyframes fadeIn {
+    from {opacity:0;}
+    to {opacity:1;}
+}
+
+/* hide/blur content before login */
+.container.hidden {
+    visibility: hidden;
+}
+
+body.blur .container {
+    filter: blur(5px);
+    pointer-events: none;
+    user-select: none;
+}
 </style>
+
 </head>
 
-<body>
+<body class="blur">
 
 <!-- simple login overlay -->
 <div id="loginOverlay">
@@ -313,7 +334,7 @@ button {
     </div>
 </div>
 
-<div class="container">
+<div class="container hidden">
     <div class="header">
         <h1><i class="fas fa-cogs"></i> MQTT Device Manager</h1>
         <p>Quản lý thiết bị IoT qua MQTT Broker</p>
@@ -386,6 +407,9 @@ function doLogin() {
 
     if (user === "admin" && pass === "admin1234") {
         document.getElementById("loginOverlay").style.display = "none";
+        // reveal content
+        document.querySelector(".container").classList.remove("hidden");
+        document.body.classList.remove("blur");
         return;
     }
     alert("Sai tài khoản hoặc mật khẩu!");
